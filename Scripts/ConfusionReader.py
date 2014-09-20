@@ -1,21 +1,20 @@
-confusionMatrix = "F:\\Thesis\\External\\ClassifierTraining\\Results\\Confusion.txt"
-output = "F:\\Thesis\\External\\ClassifierTraining\\Results\\CleanMatrix.csv"
+confusionMatrix = "F:\\Thesis\\External\\ClassifierTraining\\Results\\Confusions\\||Confusion.txt"
+output = "F:\\Thesis\\External\\ClassifierTraining\\Results\\Confusions\\||Matrix.csv"
 
-fid = open(confusionMatrix, 'r')
-lines = fid.readlines()
-fid.close()
+EXTS = ["MFC", "PLP", "STFT", "STFTSorted"]
 
-outputFile = open(output, 'w')
+for ext in EXTS:
+    fid = open(confusionMatrix.replace("||", ext), 'r')
+    lines = fid.readlines()
+    fid.close()
 
-for line in lines:
-    data = line.split()
-    data.reverse()
-    data.pop(0)
-    data.pop(0)
-    data.reverse()
-    data.pop(0)
+    outputFile = open(output.replace("||", ext), 'w')
 
-    outputFile.write(",".join(data))
-    outputFile.write("\n")
+    for line in lines:
+        data = line.split()
+        data = data[1:46]
 
-outputFile.close()
+        outputFile.write(",".join(data))
+        outputFile.write("\n")
+
+    outputFile.close()

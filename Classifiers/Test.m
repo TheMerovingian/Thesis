@@ -1,7 +1,11 @@
 addpath('../Voicebox/')
+addpath('../amtoolbox/monaural/')
+
+close all
 
 frameSize = 0.02;
 
 [audio, Fs] = audioread('C3CA010B.wav');
 
-val = STFTClassifier(audio, Fs, 50, frameSize, 10);
+%dwt = dwtr(audio, 
+

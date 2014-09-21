@@ -4,7 +4,7 @@ WAV = 'wav';
 
 AUDIO_DIR = 'F:/Thesis/External/Audio/';
 
-NOISE_LEVELS = [30, 15, 5];
+NOISE_LEVELS = [5]; %[30, 15, 5];
 
 TRAINING_AUDIO_DIR = 'Development/';
 
@@ -43,11 +43,15 @@ for noiseLvl = NOISE_LEVELS
             [audio, Fs] = audioread(file);
 
             noisy = AddNoise(audio, noiseLvl);
-
-            output = sprintf('%s%idB/%s/%s/%s.wav', AUDIO_DIR, noiseLvl,...
-                splitpath{6}, splitpath{7},...
-                splitpath{8});
-
+            
+            if exist(newFile, 'file')
+                X = linspace(0, Fs, length(audio));
+                noise = audioread(newFile);
+                
+                plot(X, noise, X, audio)
+                continue
+            end
+            
             audiowrite(newFile, noisy, Fs);
         end
     end

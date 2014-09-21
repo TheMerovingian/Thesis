@@ -22,14 +22,14 @@ EVAL_AUDIO_DIR = str.format("{0}Evaluation{1}", AUDIO_DIR, SEPARATOR)
 SCRIPT_DIR = str.format("{0}Scripts{1}", TRAINING_DIR, SEPARATOR)
 
 CLASSIFIER_DIR = str.format("{0}Classifiers{1}", TRAINING_DIR, SEPARATOR)
-CLASSIFIER_TRAINING_DIR = str.format("{0}Training{1}", CLASSIFIER_DIR, SEPARATOR)
-CLASSIFIER_EVAL_DIR = str.format("{0}Eval{1}", CLASSIFIER_DIR, SEPARATOR)
+CLASSIFIER_TRAINING_DIR = str.format("{0}||{1}Training{1}", CLASSIFIER_DIR, SEPARATOR)
+CLASSIFIER_EVAL_DIR = str.format("{0}||{1}Eval{1}", CLASSIFIER_DIR, SEPARATOR)
 
 DATA_DIR = str.format("{0}ConvertData{1}", FILE_START, SEPARATOR)
 
 CONFIG_DIR = str.format("{0}Configs{1}", TRAINING_DIR, SEPARATOR)
 
-HMM_DIR = str.format("{0}HMMs{1}", TRAINING_DIR, SEPARATOR)
+HMM_DIR = str.format("{0}HMMs{1}||{1}", TRAINING_DIR, SEPARATOR)
 
 RESULTS_DIR = str.format("{0}Results{1}", TRAINING_DIR, SEPARATOR)
 
@@ -43,10 +43,11 @@ PHONEME_EXT = ".phn"
 LAB_EXT = ".lab"
 WORD_EXT = ".wrd"
 
-CLASSIFIER_HTK_EXTS = [".lpd"] #".fbnk", ".lpd", ".plp", ".mfc"]                  # [".plp", ".mfc"]
-CLASSIFIER_EXTS = [".lpd"] #".fbnk", ".stft", ".plp", ".mfc"]                      # [".stft", ".lpc", ".mfc", ".plp"] #TODO: Replace
+CLASSIFIER_HTK_EXTS = [".mfc",".fbnk", ".lpd", ".plp"]                      #[".mfc", ".fbnk", ".lpd", ".plp"]
+CLASSIFIER_EXTS =  [".mfc",".fbnk", ".lpd", ".plp", ".stft"]                #[".mfc", ".fbnk", ".lpd", ".plp", ".stft"]          #TODO: Replace
 
-NOISE_LEVELS = ["Clean", "30dB", "15dB", "5dB"]
+NOISE_LEVELS = ["30dB"]                                                    #["Clean", "30dB", "15dB", "5dB"]
+
 # Script File Extension
 SCRIPT_EXT = ".scp"
 
@@ -116,16 +117,29 @@ def listAllFiles(dir, ext):
 
 
 def buildFileStructure():
-    for ext in CLASSIFIER_EXTS:
-        ext = ext.lstrip('.').upper()
-        dir = str.format("{0}{1}", HMM_DIR, ext)
+    for noiseLevel in NOISE_LEVELS:
+        dir = CLASSIFIER_DIR + noiseLevel
         if (not os.path.exists(dir)):
             os.mkdir(dir)
 
-        for i in range(TRAINING_COUNT + 1):
-            subdir = str.format("{0}{1}hmm{2}", dir, SEPARATOR, i)
-            if (not os.path.exists(subdir)):
-                os.mkdir(subdir)
+        for ext in CLASSIFIER_EXTS:
+            ext = ext.lstrip('.').upper()
+            dir = str.format("{0}{1}", HMM_DIR.replace("||", noiseLevel), ext)
+            if (not os.path.exists(dir)):
+                os.mkdir(dir)
+
+            for i in range(TRAINING_COUNT + 1):
+                subdir = str.format("{0}{1}hmm{2}", dir, SEPARATOR, i)
+                if (not os.path.exists(subdir)):
+                    os.mkdir(subdir)
+
+        dir = CLASSIFIER_TRAINING_DIR.replace("||", noiseLevel)
+        if (not os.path.exists(dir)):
+            os.mkdir(dir)
+
+        dir = CLASSIFIER_EVAL_DIR.replace("||", noiseLevel)
+        if (not os.path.exists(dir)):
+            os.mkdir(dir)
 
 
 def buildPhoneList():
@@ -189,6 +203,7 @@ def createLabFiles(audioDir, eval=False):
     doesn't already exist.
     """
     output = CLASSIFIER_TRAINING_DIR
+
     if eval:
         output = CLASSIFIER_EVAL_DIR
 
@@ -205,11 +220,13 @@ def createLabFiles(audioDir, eval=False):
 """ Generate WAV -> MFC list """
 
 
-def generateConversionList(audioDir, outputFile, eval=False, ext="MFC"):
+def generateConversionList(audioDir, outputFile, noiseLevel, eval=False, ext="MFC"):
     # Clear WAV -> MFC conversion file, to allow appending
     open(outputFile, 'w').close()
 
     ext = "." + ext.lower()
+
+    audioDir = audioDir.replace("||", noiseLevel)
 
     for folder in os.listdir(audioDir):
 
@@ -220,9 +237,11 @@ def generateConversionList(audioDir, outputFile, eval=False, ext="MFC"):
 
         for file in files:
             [name, _] = file.split('.')
-            output = CLASSIFIER_TRAINING_DIR
+
             if eval:
-                output = CLASSIFIER_EVAL_DIR
+                output = CLASSIFIER_EVAL_DIR.replace("||", noiseLevel)
+            else:
+                output = CLASSIFIER_TRAINING_DIR.replace("||", noiseLevel)
 
             output = str.format("{0}{1} {2}{3}{4}",
                                 dir,
@@ -239,13 +258,13 @@ def generateConversionList(audioDir, outputFile, eval=False, ext="MFC"):
 """ Classifier Training Lists """
 
 
-def generateClassifierLists(audioDir, ext, eval=False):
+def generateClassifierLists(audioDir, ext, noiseLevel, eval=False):
     ext = ext.lstrip('.').upper()
     files = listAllFiles(audioDir, ext)
     if eval:
-        outputFile = str.format("{0}{1}_EVAL_List.scp", SCRIPT_DIR, ext)
+        outputFile = str.format("{0}{1}_{2}_EVAL_List.scp", SCRIPT_DIR, noiseLevel, ext)
     else:
-        outputFile = str.format("{0}{1}_Training_List.scp", SCRIPT_DIR, ext)
+        outputFile = str.format("{0}{1}_{2}_Training_List.scp", SCRIPT_DIR, noiseLevel, ext)
 
     fid = open(outputFile, 'w')
 
@@ -357,8 +376,8 @@ def generatePhonemeMLF(eval=False):
 def generateHMMDefs(ext):
     ext = ext.lstrip('.').upper()
 
-    hmmDefs = str.format("{0}{1}{2}hmm0{2}HMMDef", HMM_DIR, ext, SEPARATOR)
-    proto = str.format("{0}{1}{2}hmm0{2}{1}Proto", HMM_DIR, ext, SEPARATOR)  # TODO: Edit proto files of each ext
+    hmmDefs = str.format("{0}{1}{2}hmm0{2}HMMDef", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR)
+    proto = str.format("{0}{1}{2}hmm0{2}{1}Proto", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR)  # TODO: Edit proto files of each ext
 
     phn = open(SORTED_PHONELIST_LOC, 'r')
     hmm = open(hmmDefs, 'w')
@@ -393,9 +412,9 @@ def generateHMMDefs(ext):
 def generateMacros(ext):
     ext = ext.lstrip('.').upper()
 
-    macros = str.format("{0}{1}{2}hmm0{2}{1}Macros", HMM_DIR, ext, SEPARATOR)
-    proto = str.format("{0}{1}{2}hmm0{2}{1}Proto", HMM_DIR, ext, SEPARATOR)
-    vFloor = str.format("{0}{1}{2}hmm0{2}vFloors", HMM_DIR, ext, SEPARATOR)
+    macros = str.format("{0}{1}{2}hmm0{2}{1}Macros", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR)
+    proto = str.format("{0}{1}{2}hmm0{2}{1}Proto", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR)
+    vFloor = str.format("{0}{1}{2}hmm0{2}vFloors", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR)
 
     macroFile = open(macros, 'w')
     headerFile = open(proto, 'r')
@@ -514,7 +533,7 @@ def generateMonophoneWithoutSP():
     withoutSP.close()
 
 
-def performReestimation(ext, currentIteration, includeSPModel=False, includeNewMLF=False):
+def performReestimation(ext, currentIteration, noiseLevel, includeSPModel=False, includeNewMLF=False):
     ext = ext.lstrip('.').upper()
 
     if includeSPModel:
@@ -534,14 +553,15 @@ def performReestimation(ext, currentIteration, includeSPModel=False, includeNewM
 
     pruning = "-t 250.0 150.0 1000.0"
 
-    macros = str.format("{0}{1}{2}hmm{3}{2}{1}Macros", HMM_DIR, ext, SEPARATOR, currentIteration)
-    hmmDef = str.format("{0}{1}{2}hmm{3}{2}HMMDef", HMM_DIR, ext, SEPARATOR, currentIteration)
-    output = str.format("{0}{1}{2}hmm{3}", HMM_DIR, ext, SEPARATOR, currentIteration + 1)
+    macros = str.format("{0}{1}{2}hmm{3}{2}{1}Macros", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR, currentIteration)
+    hmmDef = str.format("{0}{1}{2}hmm{3}{2}HMMDef", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR, currentIteration)
+    output = str.format("{0}{1}{2}hmm{3}", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR, currentIteration + 1)
+    script = str.format("{0}{1}_{2}_Training_List.scp", SCRIPT_DIR, noiseLevel, ext)
 
     command = str.format("HERest -C {0} -I {1} {7} -S {2} -H {3} -H {4} -M {5} {6}",
                          CONFIG_HCOMPV.replace("||", ext),
                          mlf,
-                         SCRIPT_DIR + ext + "_Training_List.scp",
+                         script,
                          macros,
                          hmmDef,
                          output,
@@ -552,7 +572,7 @@ def performReestimation(ext, currentIteration, includeSPModel=False, includeNewM
     os.system(command)
 
 
-def performRealignment(ext, currentIteration):
+def performRealignment(ext, currentIteration, noiseLevel):
     ext = ext.lstrip('.').upper()
 
     if ext == "MFC":
@@ -560,8 +580,9 @@ def performRealignment(ext, currentIteration):
     else:
         pruning = ""
 
-    macros = str.format("{0}{1}{2}hmm{3}{2}{1}Macros", HMM_DIR, ext, SEPARATOR, currentIteration)
-    hmmDef = str.format("{0}{1}{2}hmm{3}{2}HMMDef", HMM_DIR, ext, SEPARATOR, currentIteration)
+    macros = str.format("{0}{1}{2}hmm{3}{2}{1}Macros", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR, currentIteration)
+    hmmDef = str.format("{0}{1}{2}hmm{3}{2}HMMDef", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR, currentIteration)
+    script = str.format("{0}{1}_{2}_Training_List.scp", SCRIPT_DIR, noiseLevel, ext)
 
     command = str.format(
         "HVite -T 1 -l * -o SWT -b SIL -C {0} -a -H {1} -H {2} -i {3} -m {9} -y lab -a -I {4} -S {5} {6} {7} > {8}",
@@ -570,7 +591,7 @@ def performRealignment(ext, currentIteration):
         hmmDef,
         MLF_REALIGNED.replace("||", ext),
         MLF_TRAINING_PHONE,
-        SCRIPT_DIR + ext + "_Training_List.scp",
+        script,
         DICT_PHONE_LOC,
         SORTED_PHONELIST_LOC,
         TRAINING_DIR + "HVITE.log",
@@ -716,11 +737,11 @@ def stripFullStops():
                     wrd.close()
 
 
-def generateFirstPassHMM(ext):
+def generateFirstPassHMM(ext, noiseLevel):
     ext = ext.lstrip('.').upper()
 
-    script = str.format("{0}{1}_Training_List.scp", SCRIPT_DIR, ext)
-    outputFolder = str.format("{0}{1}{2}hmm0", HMM_DIR, ext, SEPARATOR)
+    script = str.format("{0}{1}_{2}_Training_List.scp", SCRIPT_DIR, noiseLevel, ext)
+    outputFolder = str.format("{0}{1}{2}hmm0", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR)
     hmmCommand = str.format("HCompV -T 1 -C {0} -f 0.01 -m -S {1} -M {2} {3}",
                             CONFIG_HCOMPV.replace("||", ext),
                             script,
@@ -729,8 +750,9 @@ def generateFirstPassHMM(ext):
 
     os.system(hmmCommand)
 
-def fixFirstPassHMM(ext):
-    outputFolder = str.format("{0}{1}{2}hmm0{2}HMMDef", HMM_DIR, ext, SEPARATOR)
+
+def fixFirstPassHMM(ext, noiseLevel):
+    outputFolder = str.format("{0}{1}{2}hmm0{2}HMMDef", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR)
 
     fid = open(outputFolder, 'r')
     lines = fid.readlines()
@@ -798,13 +820,13 @@ while (not command.startswith("Q")):
         print("Completed")
 
         sleep(SLEEP_S)
-        for noiseLvl in NOISE_LEVELS:
+        for noiseLevel in NOISE_LEVELS:
             for ext in CLASSIFIER_HTK_EXTS:
                 ext = ext.lstrip('.').upper()
                 # Generate the wav -> MFC script
                 print(str.format("Generating the wav -> {0} conversion script", ext))
                 wavConvertFile = str.format("{0}{1}{2}", SCRIPT_DIR, "WAV_MFC_Conversion_List", SCRIPT_EXT)
-                generateConversionList(TRAINING_AUDIO_DIR.replace("||", noiseLvl), wavConvertFile, ext=ext)
+                generateConversionList(TRAINING_AUDIO_DIR, wavConvertFile, noiseLevel, ext=ext)
                 print("Completed")
 
                 sleep(SLEEP_S)
@@ -823,7 +845,7 @@ while (not command.startswith("Q")):
             print("Generating lists for each classifier")
             for ext in CLASSIFIER_EXTS:
                 ext = ext.lstrip('.').upper()
-                generateClassifierLists(CLASSIFIER_TRAINING_DIR, ext)
+                generateClassifierLists(CLASSIFIER_TRAINING_DIR.replace("||", noiseLevel), ext, noiseLevel)
             print("Completed")
 
             sleep(SLEEP_S)
@@ -833,7 +855,7 @@ while (not command.startswith("Q")):
                 ext = ext.lstrip('.').upper()
 
                 print(str.format("Performing {0} HMM initialisation", ext))
-                generateFirstPassHMM(ext)
+                generateFirstPassHMM(ext, noiseLevel)
                 print("Completed")
 
                 sleep(SLEEP_S)
@@ -857,140 +879,147 @@ while (not command.startswith("Q")):
             sleep(SLEEP_S)
 
     elif (command.startswith("T")):
-        for ext in CLASSIFIER_EXTS:  # TODO: Handle all classifiers
-            ext = ext.lstrip('.').upper()
+        for noiseLevel in NOISE_LEVELS:
+            for ext in CLASSIFIER_EXTS:  # TODO: Handle all classifiers
+                ext = ext.lstrip('.').upper()
 
-            currentIteration = 0
+                currentIteration = 0
 
-            # Re-estimation 1-3
-            for i in range(3):
-                print(str.format("Performing Re-Estimation {0} for the {1} classifier", currentIteration + 1, ext))
+                # Re-estimation 1-3
+                for i in range(3):
+                    print(str.format("Performing Re-Estimation {0} for the {1} classifier at {2} SNR",
+                                     currentIteration + 1, ext, noiseLevel))
 
-                performReestimation(ext, currentIteration)
+                    performReestimation(ext, currentIteration, noiseLevel)
 
-                currentIteration += 1
+                    currentIteration += 1
 
+                    print("Completed")
+
+                    sleep(SLEEP_S)
+
+                # Re-estimation 4-6
+                for i in range(3):
+                    print(str.format("Performing Re-Estimation {0} for the {1} classifier at {2} SNR",
+                                     currentIteration + 1, ext, noiseLevel))
+
+                    performReestimation(ext, currentIteration, noiseLevel, True)
+
+                    currentIteration += 1
+
+                    print("Completed")
+
+                    sleep(SLEEP_S)
+
+
+                # Realign phonetic data with dictionary
+                print("Realigning the training data")
+                performRealignment(ext, currentIteration, noiseLevel)
                 print("Completed")
 
                 sleep(SLEEP_S)
 
-            # Re-estimation 4-6
-            for i in range(3):
-                print(str.format("Performing Re-Estimation {0} for the {1} classifier", currentIteration + 1, ext))
+                # Re-estimation 7-9
+                for i in range(TRAINING_COUNT - currentIteration):
+                    print(str.format("Performing Re-Estimation {0} for the {1} classifier at {2} SNR",
+                                     currentIteration + 1, ext, noiseLevel))
 
-                performReestimation(ext, currentIteration, True)
+                    performReestimation(ext, currentIteration, noiseLevel, True, True)
 
-                currentIteration += 1
+                    currentIteration += 1
 
-                print("Completed")
+                    print("Completed")
 
-                sleep(SLEEP_S)
-
-
-            # Realign phonetic data with dictionary
-            print("Realigning the training data")
-            performRealignment(ext, currentIteration)
-            print("Completed")
-
-            sleep(SLEEP_S)
-
-            # Re-estimation 7-9
-            for i in range(TRAINING_COUNT - currentIteration):
-                print(str.format("Performing Re-Estimation {0} for the {1} classifier", currentIteration + 1, ext))
-
-                performReestimation(ext, currentIteration, True, True)
-
-                currentIteration += 1
-
-                print("Completed")
-
-                sleep(SLEEP_S)
+                    sleep(SLEEP_S)
 
     elif (command.startswith("E")):
-        for ext in CLASSIFIER_HTK_EXTS:
-            ext = ext.lstrip('.').upper()
-            # Generate the training wav -> MFC script
-            print(str.format("Generating the wav -> {0} conversion script", ext))
-            wavConvertFile = str.format("{0}{1}{2}", SCRIPT_DIR, "WAV_MFC_EVAL_Conversion_List", SCRIPT_EXT)
-            generateConversionList(EVAL_AUDIO_DIR, wavConvertFile, True, ext)
+        for noiseLevel in NOISE_LEVELS:
+            for ext in CLASSIFIER_HTK_EXTS:
+                ext = ext.lstrip('.').upper()
+
+                # Generate the training wav -> MFC script
+                print(str.format("Generating the wav -> {0} conversion script", ext))
+                wavConvertFile = str.format("{0}{1}{2}", SCRIPT_DIR, "WAV_MFC_EVAL_Conversion_List", SCRIPT_EXT)
+                generateConversionList(EVAL_AUDIO_DIR, wavConvertFile, noiseLevel, True, ext)
+                print("Completed")
+
+                sleep(SLEEP_S)
+
+                # Perform the wav -> MFC conversion
+                convertFile = str.format("{0}{1}{2}", SCRIPT_DIR, "WAV_MFC_EVAL_Conversion_List", SCRIPT_EXT)
+                conversionCommand = str.format("HCopy -T 1 -C {0} -S {1}", CONFIG_CONVERT.replace("||", ext), convertFile)
+
+                print(str.format("Performing wav -> {0} conversion", ext))
+                os.system(conversionCommand)
+                print("Completed")
+
+                sleep(SLEEP_S)
+
+
+            # Generate the classifier lists
+            print("Generating lists for each classifier")
+            for ext in CLASSIFIER_EXTS:
+                ext = ext.lstrip('.').upper()
+                generateClassifierLists(CLASSIFIER_EVAL_DIR.replace("||", noiseLevel), ext, noiseLevel, True)
             print("Completed")
 
             sleep(SLEEP_S)
 
-            # Perform the wav -> MFC conversion
-            convertFile = str.format("{0}{1}{2}", SCRIPT_DIR, "WAV_MFC_EVAL_Conversion_List", SCRIPT_EXT)
-            conversionCommand = str.format("HCopy -T 1 -C {0} -S {1}", CONFIG_CONVERT.replace("||", ext), convertFile)
-
-            print(str.format("Performing wav -> {0} conversion", ext))
-            os.system(conversionCommand)
+            # Check if .phn have been converted to .lab files
+            print("Generating correct phone transcriptions")
+            #generatePhonemeMLF(True)
             print("Completed")
 
             sleep(SLEEP_S)
 
+            # Recognition test
+            for ext in CLASSIFIER_EXTS:  #TODO: Fix to include all classifiers
+                ext = ext.lstrip('.').upper()
 
-        # Generate the classifier lists
-        print("Generating lists for each classifier")
-        for ext in CLASSIFIER_EXTS:
-            ext = ext.lstrip('.').upper()
-            generateClassifierLists(CLASSIFIER_EVAL_DIR, ext, True)
-        print("Completed")
+                hmmDef = str.format("{0}{1}{2}hmm{3}{2}HMMDef", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR, TRAINING_COUNT)
+                listFile = str.format("{0}{1}_{2}_EVAL_List.scp", SCRIPT_DIR, noiseLevel, ext)
 
-        sleep(SLEEP_S)
+                command = str.format("HVite -b SIL -C {0} -H {1} -S {2} -i {3} -w {4} -p 0.0 -s 3.0 {5} {6}",
+                                     CONFIG_HCOMPV.replace("||", ext),
+                                     hmmDef,
+                                     listFile,
+                                     MLF_EVAL.replace("||", ext),
+                                     WORDNET_LOC,
+                                     DICT_PHONE_LOC,
+                                     SORTED_PHONELIST_LOC
+                )
 
-        # Check if .phn have been converted to .lab files
-        print("Generating correct phone transcriptions")
-        #generatePhonemeMLF(True)
-        print("Completed")
+                print(str.format("Performing recognition test for {0} at {1} SNR", ext, noiseLevel))
+                os.system(command)
+                print("Completed")
 
-        sleep(SLEEP_S)
+            sleep(SLEEP_S)
 
-        # Recognition test
-        for ext in CLASSIFIER_EXTS:  #TODO: Fix to include all classifiers
-            ext = ext.lstrip('.').upper()
+            # Results
+            for ext in CLASSIFIER_EXTS:
+                ext = ext.lstrip('.').upper()
 
-            hmmDef = str.format("{0}{1}{2}hmm{3}{2}HMMDef", HMM_DIR, ext, SEPARATOR, TRAINING_COUNT)
-            listFile = str.format("{0}{1}_EVAL_List.scp", SCRIPT_DIR, ext)
+                MLFOutput = MLF_EVAL.replace("||", ext)
 
-            command = str.format("HVite -b SIL -C {0} -H {1} -S {2} -i {3} -w {4} -p 0.0 -s 3.0 {5} {6}",
-                                 CONFIG_HCOMPV.replace("||", ext),
-                                 hmmDef,
-                                 listFile,
-                                 MLF_EVAL.replace("||", ext),
-                                 WORDNET_LOC,
-                                 DICT_PHONE_LOC,
-                                 SORTED_PHONELIST_LOC
-            )
+                command = str.format("HResults -d 5 -f -p -I {0} {1} {2} > {3}{4}{5}Output.txt",
+                                     MLF_EVAL_PHONE,
+                                     SORTED_PHONELIST_LOC,
+                                     MLFOutput,
+                                     RESULTS_DIR,
+                                     noiseLevel,
+                                     ext
+                )
 
-            print(str.format("Performing recognition test for {0}", ext))
-            os.system(command)
-            print("Completed")
-
-        sleep(SLEEP_S)
-
-        # Results
-        for ext in CLASSIFIER_EXTS:
-            ext = ext.lstrip('.').upper()
-
-            MLFOutput = MLF_EVAL.replace("||", ext)
-
-            command = str.format("HResults -d 5 -f -p -I {0} {1} {2} > {3}{4}Output.txt",
-                                 MLF_EVAL_PHONE,
-                                 SORTED_PHONELIST_LOC,
-                                 MLFOutput,
-                                 RESULTS_DIR,
-                                 ext
-            )
-
-            print(str.format("Outputing results for {0}", ext))
-            os.system(command)
-            print("Completed")
+                print(str.format("Outputing results for {0} at {1} SNR", ext, noiseLevel))
+                os.system(command)
+                print("Completed")
 
     elif (command.startswith("N")):
         for ext in CLASSIFIER_EXTS:  #TODO: Update so it can do multiple classifier configs
             ext = ext.lstrip('.').upper()
 
             print(str.format("Performing {0} HMM initialisation", ext))
-            generateFirstPassHMM(ext)
+            generateFirstPassHMM(ext, noiseLevel)
             print("Completed")
 
             sleep(SLEEP_S)

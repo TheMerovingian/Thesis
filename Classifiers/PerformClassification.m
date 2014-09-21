@@ -1,5 +1,7 @@
 function [] = PerformClassification(classifierFileList, outputDirectory)
 
+WAV = 'wav';
+
 % HTK output varaibles
 STFT_OUTPUT_CODE = 9;
 NNMF_OUTPUT_CODE = 9;
@@ -21,6 +23,10 @@ for n = 1:length(classifierFileList)
     
     splitpath = strsplit(path{1}, '\\');
     name = splitpath{end};
+
+    if ~exist(outputDirectory, 'dir')
+        mkdir(outputDirectory)
+    end
     
     if ~strcmp(ext, WAV)
         continue

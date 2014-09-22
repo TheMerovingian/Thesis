@@ -6,7 +6,7 @@ from time import sleep
 
 """ Define System Directory Constants """
 if platform.system() == "Windows":
-    FILE_START = "F:\\Thesis\\External\\"
+    FILE_START = "E:\\Thesis\\External\\"
     SEPARATOR = "\\"
 else:
     FILE_START = "/Volumes/External/"
@@ -44,9 +44,9 @@ LAB_EXT = ".lab"
 WORD_EXT = ".wrd"
 
 CLASSIFIER_HTK_EXTS = [".mfc",".fbnk", ".lpd", ".plp"]                      #[".mfc", ".fbnk", ".lpd", ".plp"]
-CLASSIFIER_EXTS =  [".mfc",".fbnk", ".lpd", ".plp", ".stft"]                #[".mfc", ".fbnk", ".lpd", ".plp", ".stft"]          #TODO: Replace
+CLASSIFIER_EXTS =  [".mfc",".fbnk", ".lpd", ".plp"]                #[".mfc", ".fbnk", ".lpd", ".plp", ".stft"]          #TODO: Replace
 
-NOISE_LEVELS = ["30dB"]                                                    #["Clean", "30dB", "15dB", "5dB"]
+NOISE_LEVELS = ["5dB"]                                                    #["Clean", "30dB", "15dB", "5dB"]
 
 # Script File Extension
 SCRIPT_EXT = ".scp"
@@ -957,6 +957,7 @@ while (not command.startswith("Q")):
 
 
             # Generate the classifier lists
+
             print("Generating lists for each classifier")
             for ext in CLASSIFIER_EXTS:
                 ext = ext.lstrip('.').upper()
@@ -979,11 +980,13 @@ while (not command.startswith("Q")):
                 hmmDef = str.format("{0}{1}{2}hmm{3}{2}HMMDef", HMM_DIR.replace("||", noiseLevel), ext, SEPARATOR, TRAINING_COUNT)
                 listFile = str.format("{0}{1}_{2}_EVAL_List.scp", SCRIPT_DIR, noiseLevel, ext)
 
+                outputMLF = MLF_EVAL.replace("||", str.format("_{0}_{1}_", noiseLevel, ext))
+
                 command = str.format("HVite -b SIL -C {0} -H {1} -S {2} -i {3} -w {4} -p 0.0 -s 3.0 {5} {6}",
                                      CONFIG_HCOMPV.replace("||", ext),
                                      hmmDef,
                                      listFile,
-                                     MLF_EVAL.replace("||", ext),
+                                     outputMLF,
                                      WORDNET_LOC,
                                      DICT_PHONE_LOC,
                                      SORTED_PHONELIST_LOC
@@ -999,12 +1002,12 @@ while (not command.startswith("Q")):
             for ext in CLASSIFIER_EXTS:
                 ext = ext.lstrip('.').upper()
 
-                MLFOutput = MLF_EVAL.replace("||", ext)
+                outputMLF = MLF_EVAL.replace("||", str.format("_{0}_{1}_", noiseLevel, ext))
 
-                command = str.format("HResults -d 5 -f -p -I {0} {1} {2} > {3}{4}{5}Output.txt",
+                command = str.format("HResults -t -d 5 -f -p -I {0} {1} {2} > {3}{4}_{5}_Output.txt",
                                      MLF_EVAL_PHONE,
                                      SORTED_PHONELIST_LOC,
-                                     MLFOutput,
+                                     outputMLF,
                                      RESULTS_DIR,
                                      noiseLevel,
                                      ext

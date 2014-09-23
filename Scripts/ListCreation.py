@@ -46,7 +46,7 @@ WORD_EXT = ".wrd"
 CLASSIFIER_HTK_EXTS = [".mfc",".fbnk", ".lpd", ".plp"]                      #[".mfc", ".fbnk", ".lpd", ".plp"]
 CLASSIFIER_EXTS =  [".mfc",".fbnk", ".lpd", ".plp"]                #[".mfc", ".fbnk", ".lpd", ".plp", ".stft"]          #TODO: Replace
 
-NOISE_LEVELS = ["5dB"]                                                    #["Clean", "30dB", "15dB", "5dB"]
+NOISE_LEVELS = ["Clean"]                                                    #["Clean", "30dB", "15dB", "5dB"]
 
 # Script File Extension
 SCRIPT_EXT = ".scp"
@@ -950,7 +950,7 @@ while (not command.startswith("Q")):
                 conversionCommand = str.format("HCopy -T 1 -C {0} -S {1}", CONFIG_CONVERT.replace("||", ext), convertFile)
 
                 print(str.format("Performing wav -> {0} conversion", ext))
-                os.system(conversionCommand)
+                #os.system(conversionCommand)
                 print("Completed")
 
                 sleep(SLEEP_S)
@@ -1004,7 +1004,7 @@ while (not command.startswith("Q")):
 
                 outputMLF = MLF_EVAL.replace("||", str.format("_{0}_{1}_", noiseLevel, ext))
 
-                command = str.format("HResults -t -d 5 -f -p -I {0} {1} {2} > {3}{4}_{5}_Output.txt",
+                command = str.format("HResults -t -d 5 -f -p -w -I {0} {1} {2} > {3}{4}_{5}_Output.txt",
                                      MLF_EVAL_PHONE,
                                      SORTED_PHONELIST_LOC,
                                      outputMLF,
@@ -1018,25 +1018,24 @@ while (not command.startswith("Q")):
                 print("Completed")
 
     elif (command.startswith("N")):
-        for ext in CLASSIFIER_EXTS:  #TODO: Update so it can do multiple classifier configs
-            ext = ext.lstrip('.').upper()
+        for noiseLevel in NOISE_LEVELS:
+            for ext in CLASSIFIER_EXTS:
+                    ext = ext.lstrip('.').upper()
 
-            print(str.format("Performing {0} HMM initialisation", ext))
-            generateFirstPassHMM(ext, noiseLevel)
-            print("Completed")
+                    outputMLF = MLF_EVAL.replace("||", str.format("_{0}_{1}_", noiseLevel, ext))
 
-            sleep(SLEEP_S)
+                    command = str.format("HResults -t -d 5 -f -p -w -I {0} {1} {2} > {3}{4}_{5}_Output.txt",
+                                         MLF_EVAL_PHONE,
+                                         SORTED_PHONELIST_LOC,
+                                         outputMLF,
+                                         RESULTS_DIR,
+                                         noiseLevel,
+                                         ext
+                    )
 
-            # Generate hmmdef and macro files
-            print("Generating HMM Definitions")
-            generateHMMDefs(ext)
-            print("Completed")
-
-            print("Generating Macros")
-            generateMacros(ext)
-            print("Completed")
-
-            sleep(SLEEP_S)
+                    print(str.format("Outputing results for {0} at {1} SNR", ext, noiseLevel))
+                    os.system(command)
+                    print("Completed")
     else:
         print("Invalid option.")
 

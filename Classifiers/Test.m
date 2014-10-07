@@ -4,18 +4,18 @@ addpath('../AudioManipulation/')
 
 close all
 
-frameSize = 0.02;
-X = linspace(0, Fs, length(audio));
+noiseLevels = [30, 15, 5];
+[audio, Fs] = audioread('C3CA010B.wav');
 
-[audio, Fs] = audioread('C3CA010C.wav');
-
-noise = AddNoise(audio, 5);
-plot(X, noise, X, audio)
-
-audiowrite('Noise.wav', noise, Fs);
-noise2 = audioread('Noise.wav');
-
-figure()
-plot(X, noise2, X, audio)
-
-diff = noise-noise2;
+for noise = noiseLevels
+    noisy = AddNoise(audio, noise);
+    figure
+    hold on
+    plot(noisy, 'b')
+    plot(audio, 'r')
+    title(sprintf('Noise Addition at %idB SNR', noise), 'FontSize', 32, ...
+        'FontWeight', 'bold')
+    legend(sprintf('%idB SNR', noise), 'Clean', 'FontSize', 16)
+    ylabel('Amplitude', 'FontSize', 16)
+    set(gca, 'FontSize', 16, 'XTickLabel', '', 'XTick', 0)
+end
